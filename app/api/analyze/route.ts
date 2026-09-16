@@ -28,15 +28,8 @@ Important: a vision-language model cannot prove whether media is AI-generated, i
 Return JSON only with exactly these fields: {"verdict":"likely_authentic|uncertain|likely_manipulated","syntheticRisk":0-100,"confidence":0-100,"summary":"2 concise sentences grounded in visible evidence","findings":[{"label":"short label","observation":"specific visible observation, or say no anomaly observed","significance":"low|medium|high"}],"counterEvidence":["1-3 visible facts or innocent explanations that reduce certainty"],"recommendedAction":"one concrete verification action a user should take next","limitations":"one concise, media-specific limitation"}. Provide 2-4 findings. Do not identify a real person or infer sensitive traits.`;
     const content = [{ type: "text", text: prompt }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))];
     const payload = JSON.stringify({ model: MODEL, messages: [{ role: "user", content }], temperature: 0.7, max_completion_tokens: 650, reasoning_effort: "none", include_reasoning: false, response_format: { type: "json_object" } });
-    let response: Response | undefined;
-    let groq: { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } } = {};
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: payload, signal: AbortSignal.timeout(24_000) });
-      groq = await response.json();
-      if (response.ok || response.status !== 503) break;
-      await new Promise((resolve) => setTimeout(resolve, 1_200));
-    }
-    if (!response) throw new Error("No response from the analysis provider.");
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: payload, signal: AbortSignal.timeout(50_000) });
+    const groq = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
     if (!response.ok) {
       console.error("Groq analysis error", response.status, groq.error?.message);
       const atCapacity = response.status === 503 || /capacity/i.test(groq.error?.message || "");
@@ -50,5 +43,9 @@ Return JSON only with exactly these fields: {"verdict":"likely_authentic|uncerta
     const verdict = allowedVerdicts.includes(parsed.verdict || "") ? parsed.verdict : "uncertain";
     const findings = Array.isArray(parsed.findings) ? parsed.findings.slice(0, 4).map((finding) => ({ label: cleanText(finding.label, "Visual observation", 80), observation: cleanText(finding.observation, "No reliable observation was returned.", 420), significance: ["low", "medium", "high"].includes(finding.significance || "") ? finding.significance : "low" })) : [];
     return NextResponse.json({ verdict, syntheticRisk: clampScore(parsed.syntheticRisk, 50), confidence: clampScore(parsed.confidence, 50), summary: cleanText(parsed.summary, "The visual review was inconclusive."), findings: findings.length ? findings : [{ label: "Insufficient visual evidence", observation: "No dependable manipulation clue was isolated in the supplied pixels.", significance: "low" }], counterEvidence: Array.isArray(parsed.counterEvidence) ? parsed.counterEvidence.slice(0, 3).map((item) => cleanText(item, "", 260)).filter(Boolean) : [], recommendedAction: cleanText(parsed.recommendedAction, "Find the earliest available source and compare it with reporting from an independent trusted outlet.", 420), limitations: cleanText(parsed.limitations, "This is an AI-assisted visual review, not proof of authenticity or manipulation.", 420), framesAnalyzed: images.length, model: MODEL }, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) { console.error("Analysis route failed", error instanceof Error ? error.message : error); return NextResponse.json({ error: "The file could not be analyzed. Please try a different image or shorter video." }, { status: 500 }); }
+  } catch (error) {
+    console.error("Analysis route failed", error instanceof Error ? error.message : error);
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || /timeout/i.test(error.message));
+    return NextResponse.json({ error: timedOut ? "Groq's vision model is taking too long right now. Please retry in a minute." : "The file could not be analyzed. Please try a different image or shorter video." }, { status: timedOut ? 503 : 500 });
+  }
 }
