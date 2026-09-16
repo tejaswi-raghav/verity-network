@@ -41,7 +41,7 @@ The secret is read only by `app/api/analyze/route.ts` and must never use a `NEXT
 - Next.js 16 and React 19
 - Tailwind CSS 4
 - Groq Chat Completions API
-- `qwen/qwen3.6-27b` vision model
+- `qwen/qwen3.8-27b` vision model
 
 ## Privacy and limits
 
