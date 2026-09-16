@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-const MODEL = "qwen/qwen3.6-27b";
+const MODEL = "qwen/qwen3.8-27b";
 const MAX_BODY_BYTES = 4_200_000;
 
 type GroqPayload = { verdict?: string; syntheticRisk?: number; confidence?: number; summary?: string; findings?: Array<{ label?: string; observation?: string; significance?: string }>; counterEvidence?: string[]; recommendedAction?: string; limitations?: string };
