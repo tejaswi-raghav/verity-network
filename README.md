@@ -1,28 +1,52 @@
-# Verity Network
+# Verity MVP
 
-An explainable deepfake and synthetic-media verification workspace for people, newsrooms, content platforms, and election monitors.
+Verity is a privacy-conscious, AI-assisted triage tool for suspicious images and videos. It uses Groq vision inference to surface visible manipulation indicators, counter-evidence, limitations, and a recommended verification step.
 
-## Product experience
+## What it does
 
-- Visual media verifier with a simulated ensemble-forensics workflow
-- Explainable evidence layers for model fingerprints, biological signals, temporal coherence, and C2PA provenance
-- Confidence scoring and human-readable reasons for every verdict
-- Zero-retention privacy indicators
-- Developer REST API console
-- Responsive desktop and mobile interface
-- WebMCP action for starting a verification scan
+- Accepts JPG, PNG, WEBP, MP4, MOV, and WEBM files.
+- Compresses images locally and samples three video frames locally.
+- Sends only those prepared pixels to a server-side Groq API route.
+- Returns a structured assessment instead of an unsupported binary “fake” claim.
+- Does not write uploads or results to a database.
 
-## Run locally
+Verity is decision support, not forensic proof. General-purpose vision models cannot inspect original-file provenance, reliably identify every generator, or certify authenticity.
+
+## Local development
 
 ```bash
 pnpm install
+cp .env.example .env.local
 pnpm dev
+```
+
+Add your Groq key to `.env.local`:
+
+```bash
+GROQ_API_KEY=your_key_here
 ```
 
 Open http://localhost:3000.
 
+The secret is read only by `app/api/analyze/route.ts` and must never use a `NEXT_PUBLIC_` prefix.
+
 ## Deploy to Vercel
 
-Import this repository in Vercel. No environment variables are required for this prototype.
+1. Import this repository into Vercel.
+2. Add `GROQ_API_KEY` under Project Settings → Environment Variables.
+3. Deploy. Future pushes to `main` will redeploy automatically.
 
-> This interface demonstrates the product workflow with representative forensic results. Connect it to production detection models before real moderation or public-integrity use.
+## Stack
+
+- Next.js 16 and React 19
+- Tailwind CSS 4
+- Groq Chat Completions API
+- `qwen/qwen3.6-27b` vision model
+
+## Privacy and limits
+
+Verity does not persist media itself, but prepared frames are sent to Groq for inference and are subject to Groq's service terms. Add authentication, durable rate limiting, abuse controls, and a specialist forensic model before using this as a high-volume public service.
+
+## License
+
+MIT
