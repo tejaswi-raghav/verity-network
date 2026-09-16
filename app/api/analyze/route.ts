@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 const MODEL = "qwen/qwen3.8-27b";
 const MAX_BODY_BYTES = 4_200_000;
 
@@ -27,9 +27,22 @@ Important: a vision-language model cannot prove whether media is AI-generated, i
 
 Return JSON only with exactly these fields: {"verdict":"likely_authentic|uncertain|likely_manipulated","syntheticRisk":0-100,"confidence":0-100,"summary":"2 concise sentences grounded in visible evidence","findings":[{"label":"short label","observation":"specific visible observation, or say no anomaly observed","significance":"low|medium|high"}],"counterEvidence":["1-3 visible facts or innocent explanations that reduce certainty"],"recommendedAction":"one concrete verification action a user should take next","limitations":"one concise, media-specific limitation"}. Provide 2-4 findings. Do not identify a real person or infer sensitive traits.`;
     const content = [{ type: "text", text: prompt }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))];
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, messages: [{ role: "user", content }], temperature: 0.2, max_completion_tokens: 800, response_format: { type: "json_object" } }), signal: AbortSignal.timeout(28_000) });
-    const groq = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
-    if (!response.ok) { console.error("Groq analysis error", response.status, groq.error?.message); return NextResponse.json({ error: response.status === 429 ? "The analyzer is busy. Please wait a moment and retry." : "The AI analysis service could not complete this scan." }, { status: response.status === 429 ? 429 : 502 }); }
+    const payload = JSON.stringify({ model: MODEL, messages: [{ role: "user", content }], temperature: 0.7, max_completion_tokens: 650, reasoning_effort: "none", include_reasoning: false, response_format: { type: "json_object" } });
+    let response: Response | undefined;
+    let groq: { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } } = {};
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: payload, signal: AbortSignal.timeout(24_000) });
+      groq = await response.json();
+      if (response.ok || response.status !== 503) break;
+      await new Promise((resolve) => setTimeout(resolve, 1_200));
+    }
+    if (!response) throw new Error("No response from the analysis provider.");
+    if (!response.ok) {
+      console.error("Groq analysis error", response.status, groq.error?.message);
+      const atCapacity = response.status === 503 || /capacity/i.test(groq.error?.message || "");
+      const error = atCapacity ? "Groq's vision model is temporarily at capacity. Please retry in a minute." : response.status === 429 ? "The analyzer is busy. Please wait a moment and retry." : "The AI analysis service could not complete this scan.";
+      return NextResponse.json({ error }, { status: response.status === 429 ? 429 : 503 });
+    }
     const raw = groq.choices?.[0]?.message?.content;
     if (!raw) throw new Error("The model returned an empty response.");
     const parsed = JSON.parse(raw) as GroqPayload;
