@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Verity — AI-assisted media verification",
-  description: "Upload suspicious images or videos for a fast, explainable visual manipulation review.",
+  title: "Verity Network — Explainable media verification",
+  description: "Run privacy-conscious edge checks and an explainable multi-layer review of suspicious images or videos.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

@@ -51,5 +51,19 @@ button:focus-visible,a:focus-visible { outline:2px solid #b8ff57; outline-offset
 .flow-step span { display:grid; place-items:center; width:1.75rem; height:1.75rem; border-radius:.5rem; background:rgba(184,255,87,.08); color:#b8ff57; font-size:.7rem; font-weight:700; }
 .flow-step p { font-size:.75rem; color:#aab4bb; }
 .flow-step svg { width:.85rem; height:.85rem; color:#b8ff57; }
+.pipeline-column { display:flex; align-items:center; gap:.85rem; min-height:5.5rem; border:1px solid rgba(255,255,255,.08); border-radius:1rem; padding:1rem; background:linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012)); }
+.pipeline-column>span { display:grid; place-items:center; width:2.35rem; height:2.35rem; flex:0 0 auto; border:1px solid rgba(184,255,87,.16); border-radius:.75rem; background:rgba(184,255,87,.06); color:#b8ff57; }
+.pipeline-column svg { width:1rem; height:1rem; }
+.pipeline-column p { font-size:.82rem; font-weight:600; color:#edf3f1; }
+.pipeline-column small { display:block; margin-top:.25rem; font-size:.68rem; line-height:1.45; color:#6f7c86; }
+.capability-card { min-height:9rem; border:1px solid rgba(255,255,255,.075); border-radius:1rem; padding:1rem; background:rgba(255,255,255,.018); transition:.18s ease; }
+.capability-card:hover { border-color:rgba(184,255,87,.2); background:rgba(184,255,87,.025); transform:translateY(-2px); }
+.capability-card>svg { width:1.1rem; height:1.1rem; color:#b8ff57; }
+.capability-card p { margin-top:1.25rem; font-size:.8rem; font-weight:600; color:#e8efed; }
+.capability-card small { display:block; margin-top:.45rem; font-size:.7rem; line-height:1.55; color:#6f7c86; }
+.future-card { display:grid; grid-template-columns:2.2rem 1fr; gap:.8rem; border:1px dashed rgba(255,255,255,.1); border-radius:1rem; padding:1rem; background:rgba(255,255,255,.012); }
+.future-card>svg { width:1rem; height:1rem; margin-top:.12rem; color:#f5bd52; }
+.future-card p { font-size:.78rem; font-weight:600; color:#cbd4d8; }
+.future-card small { display:block; margin-top:.3rem; font-size:.7rem; line-height:1.5; color:#67737d; }
 @media (max-width:640px) { .primary-button,.secondary-button { padding:.55rem .62rem; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
