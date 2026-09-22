@@ -5,6 +5,7 @@ Verity is a privacy-conscious, multi-layer triage tool for suspicious images and
 ## What it does
 
 - Accepts JPG, PNG, WEBP, MP4, MOV, and WEBM files.
+- Includes a clearly labeled generated demo so first-time users can test the workflow immediately.
 - Compresses images locally and samples three video frames locally.
 - Computes a local SHA-256 digest and perceptual dHash.
 - Measures lightweight high-frequency, compression-boundary, and temporal signals in the browser.
@@ -13,6 +14,7 @@ Verity is a privacy-conscious, multi-layer triage tool for suspicious images and
 - Sends only prepared pixels and bounded, non-diagnostic signal summaries to the server-side Groq API route.
 - Returns a structured assessment instead of an unsupported binary “fake” claim.
 - Produces a digest-bound analysis receipt without claiming blockchain anchoring.
+- Exports a portable JSON report containing the assessment, receipt, and local evidence summary.
 - Does not write uploads or results to a database.
 
 Verity is decision support, not forensic proof. The local heuristics are routing and explainability signals, not authenticity probabilities. General-purpose vision models cannot reliably identify every generator or certify authenticity.
@@ -25,6 +27,8 @@ Verity is decision support, not forensic proof. The local heuristics are routing
 4. **Groq visual review** evaluates only visible evidence with conservative instructions and explicit limitations.
 5. **Evidence fusion** returns the model assessment beside every local layer, counter-evidence, and a human verification action.
 6. **Receipt generation** binds the file digest, perceptual fingerprint, timestamp, and request identifier into an evidence digest.
+
+The result view prioritizes plain-language evidence, counter-evidence, and the recommended human action. Detailed module output is available in a collapsed technical-evidence section.
 
 ## Production integration path
 
@@ -69,7 +73,7 @@ The secret is read only by `app/api/analyze/route.ts` and must never use a `NEXT
 
 ## Privacy and limits
 
-Verity does not persist media itself, but prepared frames are sent to Groq for inference and are subject to Groq's service terms. C2PA marker discovery does not validate a manifest or its signer. The generated receipt is not signed, notarized, or ledger-anchored. Add authentication, durable rate limiting, abuse controls, specialist forensic models, calibration datasets, and independent security review before using this as a high-volume or high-stakes public service.
+Verity does not persist media itself, but prepared frames are sent to Groq for inference and are subject to Groq's service terms. C2PA marker discovery does not validate a manifest or its signer. The generated receipt is not signed, notarized, or ledger-anchored. The API includes best-effort per-instance throttling, but a durable distributed limiter and authentication are still required before high-volume deployment. Add specialist forensic models, calibration datasets, and independent security review before using this in high-stakes contexts.
 
 ## License
 

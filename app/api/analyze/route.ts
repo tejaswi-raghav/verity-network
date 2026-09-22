@@ -5,6 +5,9 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 const MODEL = "qwen/qwen3.8-27b";
 const MAX_BODY_BYTES = 4_200_000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_REQUESTS = 12;
+const requestWindows = new Map<string, { count: number; resetAt: number }>();
 
 type GroqPayload = { verdict?: string; syntheticRisk?: number; confidence?: number; summary?: string; findings?: Array<{ label?: string; observation?: string; significance?: string }>; counterEvidence?: string[]; recommendedAction?: string; limitations?: string };
 type LocalSignals = {
@@ -19,6 +22,30 @@ type LocalSignals = {
 };
 function clampScore(value: unknown, fallback: number) { const number = typeof value === "number" ? value : Number(value); return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number))) : fallback; }
 function cleanText(value: unknown, fallback: string, max = 600) { return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : fallback; }
+function parseModelJson(raw: string) {
+  try { return JSON.parse(raw) as GroqPayload; }
+  catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("The model returned invalid JSON.");
+    return JSON.parse(raw.slice(start, end + 1)) as GroqPayload;
+  }
+}
+function rateLimit(request: NextRequest) {
+  const now = Date.now();
+  if (requestWindows.size > 1_000) {
+    for (const [key, value] of requestWindows) if (value.resetAt <= now) requestWindows.delete(key);
+  }
+  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+  const current = requestWindows.get(client);
+  if (!current || current.resetAt <= now) {
+    requestWindows.set(client, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return null;
+  }
+  current.count += 1;
+  if (current.count <= RATE_LIMIT_REQUESTS) return null;
+  return Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+}
 function cleanLocalSignals(value: unknown): LocalSignals | null {
   if (!value || typeof value !== "object") return null;
   const input = value as LocalSignals;
@@ -47,6 +74,8 @@ function cleanLocalSignals(value: unknown): LocalSignals | null {
 export async function POST(request: NextRequest) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "The analysis service is not configured yet." }, { status: 503 });
+  const retryAfter = rateLimit(request);
+  if (retryAfter) return NextResponse.json({ error: "Too many scans from this connection. Please wait a minute and retry." }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
   const length = Number(request.headers.get("content-length") || 0);
   if (length > MAX_BODY_BYTES) return NextResponse.json({ error: "The prepared media is too large. Try a smaller file." }, { status: 413 });
   try {
@@ -66,7 +95,7 @@ Important: a vision-language model cannot prove whether media is AI-generated, i
 
 Return JSON only with exactly these fields: {"verdict":"likely_authentic|uncertain|likely_manipulated","syntheticRisk":0-100,"confidence":0-100,"summary":"2 concise sentences grounded in visible evidence","findings":[{"label":"short label","observation":"specific visible observation, or say no anomaly observed","significance":"low|medium|high"}],"counterEvidence":["1-3 visible facts or innocent explanations that reduce certainty"],"recommendedAction":"one concrete verification action a user should take next","limitations":"one concise, media-specific limitation"}. Provide 2-4 findings. Do not identify a real person or infer sensitive traits.`;
     const content = [{ type: "text", text: prompt }, ...images.map((url) => ({ type: "image_url", image_url: { url } }))];
-    const payload = JSON.stringify({ model: MODEL, messages: [{ role: "user", content }], temperature: 0.7, max_completion_tokens: 650, reasoning_effort: "none", include_reasoning: false, response_format: { type: "json_object" } });
+    const payload = JSON.stringify({ model: MODEL, messages: [{ role: "user", content }], temperature: 0.2, max_completion_tokens: 650, reasoning_effort: "none", include_reasoning: false, response_format: { type: "json_object" } });
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: payload, signal: AbortSignal.timeout(50_000) });
     const groq = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
     if (!response.ok) {
@@ -77,7 +106,7 @@ Return JSON only with exactly these fields: {"verdict":"likely_authentic|uncerta
     }
     const raw = groq.choices?.[0]?.message?.content;
     if (!raw) throw new Error("The model returned an empty response.");
-    const parsed = JSON.parse(raw) as GroqPayload;
+    const parsed = parseModelJson(raw);
     const allowedVerdicts = ["likely_authentic", "uncertain", "likely_manipulated"];
     const verdict = allowedVerdicts.includes(parsed.verdict || "") ? parsed.verdict : "uncertain";
     const findings = Array.isArray(parsed.findings) ? parsed.findings.slice(0, 4).map((finding) => ({ label: cleanText(finding.label, "Visual observation", 80), observation: cleanText(finding.observation, "No reliable observation was returned.", 420), significance: ["low", "medium", "high"].includes(finding.significance || "") ? finding.significance : "low" })) : [];

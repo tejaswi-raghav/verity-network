@@ -23,6 +23,8 @@ html { scroll-behavior:smooth; }
 body { background:var(--background); color:var(--foreground); font-family:Arial,Helvetica,sans-serif; }
 button,a { -webkit-tap-highlight-color:transparent; }
 button:focus-visible,a:focus-visible { outline:2px solid #b8ff57; outline-offset:2px; }
+.trust-pill { display:inline-flex; align-items:center; gap:.3rem; border:1px solid rgba(255,255,255,.075); border-radius:999px; padding:.35rem .65rem; background:rgba(255,255,255,.018); }
+.trust-pill svg { color:#76d5aa; }
 .nav-item { display:flex; align-items:center; gap:.7rem; border:1px solid transparent; border-radius:.65rem; padding:.65rem .75rem; color:#7f8d99; font-size:.82rem; transition:.18s ease; }
 .nav-item svg { width:1rem; height:1rem; }
 .nav-item:hover { background:rgba(255,255,255,.035); color:#e7efec; }
@@ -65,5 +67,17 @@ button:focus-visible,a:focus-visible { outline:2px solid #b8ff57; outline-offset
 .future-card>svg { width:1rem; height:1rem; margin-top:.12rem; color:#f5bd52; }
 .future-card p { font-size:.78rem; font-weight:600; color:#cbd4d8; }
 .future-card small { display:block; margin-top:.3rem; font-size:.7rem; line-height:1.5; color:#67737d; }
+.scan-step { display:grid; grid-template-columns:1.8rem 1fr 1rem; align-items:center; gap:.65rem; min-height:2.65rem; border:1px solid rgba(255,255,255,.06); border-radius:.7rem; padding:.55rem .7rem; color:#56636d; transition:.2s ease; }
+.scan-step>span { font-family:var(--font-mono); font-size:.62rem; }
+.scan-step>p { font-size:.72rem; }
+.scan-step-active { border-color:rgba(184,255,87,.2); background:rgba(184,255,87,.035); color:#dfffb2; }
+.scan-step-done { color:#8ee6bd; }
+.technical-details { overflow:hidden; border:1px solid rgba(255,255,255,.08); border-radius:.85rem; background:rgba(255,255,255,.012); }
+.technical-details summary { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:3.25rem; cursor:pointer; list-style:none; padding:.8rem 1rem; color:#aab4bb; font-size:.75rem; font-weight:600; }
+.technical-details summary::-webkit-details-marker { display:none; }
+.technical-details summary>span:first-child { display:flex; align-items:center; gap:.55rem; }
+.technical-details summary:hover { color:#fff; background:rgba(255,255,255,.02); }
+.technical-details[open] .disclosure-chevron { transform:rotate(180deg); }
+.disclosure-chevron { transition:transform .2s ease; }
 @media (max-width:640px) { .primary-button,.secondary-button { padding:.55rem .62rem; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
